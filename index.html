@@ -18,12 +18,20 @@
   html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--fg);
                font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
   #cal { position:fixed; inset:0; width:100%; height:100%; border:0; }
-  #hint { position:fixed; left:0; right:0; bottom:0; z-index:10; display:none;
-          background:var(--accent); color:#fff; padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-          font-size:15px; line-height:1.4; box-shadow:0 -2px 10px rgba(0,0,0,.25); }
-  #hint b { font-weight:600; }
-  #hint button { float:right; margin-left:12px; background:rgba(255,255,255,.2); color:#fff;
-                 border:0; border-radius:6px; padding:8px 12px; font-size:15px; }
+
+  .bar { position:fixed; left:0; right:0; bottom:0; z-index:10; display:none;
+         align-items:center; gap:12px;
+         background:var(--accent); color:#fff;
+         padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+         font-size:15px; line-height:1.35;
+         box-shadow:0 -2px 10px rgba(0,0,0,.25); }
+  .bar.show { display:flex; }
+  .bar .txt { flex:1; }
+  .bar b { font-weight:600; }
+  .bar button { flex:none; border:0; border-radius:8px; padding:10px 14px;
+                font-size:15px; font-family:inherit; }
+  .bar .go    { background:#fff; color:var(--accent); font-weight:600; }
+  .bar .close { background:rgba(255,255,255,.18); color:#fff; }
 </style>
 </head>
 <body>
@@ -36,13 +44,22 @@
     src="https://calendar.google.com/calendar/embed?src=azelartmarie%40gmail.com&amp;ctz=Europe%2FParis&amp;wkst=2&amp;mode=MONTH&amp;showTitle=0&amp;showPrint=0&amp;showTabs=0&amp;showCalendars=0&amp;showTz=0"></iframe>
 </noscript>
 
-<div id="hint">
-  <button type="button" id="hintClose">OK</button>
-  Pour garder le planning&nbsp;: <b>Partager</b> puis <b>Sur l'écran d'accueil</b>.
+<!-- Android : bandeau d'installation en un tap -->
+<div class="bar" id="barAndroid">
+  <span class="txt">Garder le planning sur l'écran d'accueil&nbsp;?</span>
+  <button type="button" class="go"    id="btnInstall">Installer</button>
+  <button type="button" class="close" id="btnNoAndroid">Non</button>
+</div>
+
+<!-- iPhone / iPad : Apple n'autorise pas l'installation en un tap -->
+<div class="bar" id="barIOS">
+  <span class="txt">Pour garder le planning&nbsp;: <b>Partager</b> puis <b>Sur l'écran d'accueil</b>.</span>
+  <button type="button" class="close" id="btnNoIOS">OK</button>
 </div>
 
 <script>
 (function () {
+
   // ---- Agenda affiché ------------------------------------------------------
   // Pour changer d'agenda, remplacer la valeur de SRC ci-dessous.
   var SRC = "azelartmarie@gmail.com";
@@ -52,37 +69,77 @@
   // Pour forcer une vue, remplacer la ligne suivante par : var mode = "MONTH";
   var mode = (window.innerWidth < 600) ? "AGENDA" : "MONTH";
 
-  var url = "https://calendar.google.com/calendar/embed"
-          + "?src=" + encodeURIComponent(SRC)
-          + "&ctz=" + encodeURIComponent(TZ)
-          + "&wkst=2"              // semaine commençant le lundi
-          + "&mode=" + mode
-          + "&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0";
+  document.getElementById("cal").src =
+      "https://calendar.google.com/calendar/embed"
+    + "?src=" + encodeURIComponent(SRC)
+    + "&ctz=" + encodeURIComponent(TZ)
+    + "&wkst=2"              // semaine commençant le lundi
+    + "&mode=" + mode
+    + "&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0";
 
-  document.getElementById("cal").src = url;
+  // ---- Outils --------------------------------------------------------------
+  var barAndroid = document.getElementById("barAndroid");
+  var barIOS     = document.getElementById("barIOS");
 
-  // ---- Aide à l'installation, iPhone / iPad uniquement ---------------------
-  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-              || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  var installed = window.navigator.standalone === true
-              || window.matchMedia("(display-mode: standalone)").matches;
-  var dismissed = false;
-  try { dismissed = localStorage.getItem("hintOff") === "1"; } catch (e) {}
-
-  if (isIOS && !installed && !dismissed) {
-    document.getElementById("hint").style.display = "block";
+  function refused() {
+    try { return localStorage.getItem("hintOff") === "1"; } catch (e) { return false; }
   }
-  document.getElementById("hintClose").addEventListener("click", function () {
-    document.getElementById("hint").style.display = "none";
+  function refuse() {
     try { localStorage.setItem("hintOff", "1"); } catch (e) {}
+  }
+  function installed() {
+    return window.navigator.standalone === true
+        || window.matchMedia("(display-mode: standalone)").matches;
+  }
+
+  // ---- Android : le navigateur signale que la page est installable ---------
+  // Chrome et Samsung Internet déclenchent "beforeinstallprompt". On empêche
+  // leur propre bandeau (souvent jamais affiché) et on montre le nôtre.
+  var invite = null;
+
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    invite = e;
+    if (!installed() && !refused()) barAndroid.classList.add("show");
   });
 
-  // ---- Service worker : requis par Chrome pour proposer l'installation -----
+  document.getElementById("btnInstall").addEventListener("click", function () {
+    if (!invite) { barAndroid.classList.remove("show"); return; }
+    invite.prompt();                       // fenêtre d'installation du téléphone
+    invite.userChoice.then(function () {
+      invite = null;
+      barAndroid.classList.remove("show"); // installé ou refusé : on n'insiste pas
+    });
+  });
+
+  document.getElementById("btnNoAndroid").addEventListener("click", function () {
+    barAndroid.classList.remove("show");
+    refuse();
+  });
+
+  window.addEventListener("appinstalled", function () {
+    barAndroid.classList.remove("show");
+    refuse();
+  });
+
+  // ---- iPhone / iPad : guide manuel, seule voie possible -------------------
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+           || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isIOS && !installed() && !refused()) barIOS.classList.add("show");
+
+  document.getElementById("btnNoIOS").addEventListener("click", function () {
+    barIOS.classList.remove("show");
+    refuse();
+  });
+
+  // ---- Service worker : requis pour que la page soit installable -----------
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("sw.js").catch(function () {});
     });
   }
+
 })();
 </script>
 
