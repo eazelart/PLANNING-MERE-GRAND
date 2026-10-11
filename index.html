@@ -6,134 +6,107 @@
 <title>Planning</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f4e79">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Planning">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="icon-192.png">
 <style>
-  :root { --bg:#ffffff; --fg:#1b1b1b; --accent:#1f4e79; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#121212; --fg:#eaeaea; } }
-  html, body { margin:0; padding:0; height:100%; background:var(--bg); color:var(--fg);
+  :root { --bg:#ffffff; --fg:#1b1b1b; --muted:#5f6368; --accent:#1f4e79; --card:#f2f5f9; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#121212; --fg:#eaeaea; --muted:#a0a4a8; --card:#1e2329; --accent:#4f8fd0; }
+  }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--fg);
                font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
-  #cal { position:fixed; inset:0; width:100%; height:100%; border:0; }
+  main { max-width:560px; margin:0 auto; padding:24px 16px calc(24px + env(safe-area-inset-bottom)); }
+  h1 { font-size:24px; margin:0 0 6px; }
+  p  { font-size:16px; line-height:1.45; margin:0 0 18px; color:var(--muted); }
 
-  .bar { position:fixed; left:0; right:0; bottom:0; z-index:10; display:none;
-         align-items:center; gap:12px;
-         background:var(--accent); color:#fff;
-         padding:14px 16px calc(14px + env(safe-area-inset-bottom));
-         font-size:15px; line-height:1.35;
-         box-shadow:0 -2px 10px rgba(0,0,0,.25); }
-  .bar.show { display:flex; }
-  .bar .txt { flex:1; }
-  .bar b { font-weight:600; }
-  .bar button { flex:none; border:0; border-radius:8px; padding:10px 14px;
-                font-size:15px; font-family:inherit; }
-  .bar .go    { background:#fff; color:var(--accent); font-weight:600; }
-  .bar .close { background:rgba(255,255,255,.18); color:#fff; }
+  .btn { display:block; text-decoration:none; text-align:center;
+         border-radius:14px; padding:18px 16px; margin:0 0 14px;
+         font-size:19px; font-weight:600; border:2px solid var(--accent); }
+  .btn small { display:block; font-size:14px; font-weight:400; margin-top:4px; opacity:.85; }
+  .main { background:var(--accent); color:#fff; }   /* bouton du téléphone détecté */
+  .alt  { background:transparent; color:var(--accent); }
+
+  .help { background:var(--card); border-radius:12px; padding:12px 14px;
+          font-size:15px; line-height:1.4; margin:0 0 22px; display:none; }
+  .help.show { display:block; }
+
+  h2 { font-size:18px; margin:28px 0 10px; }
+  #cal { width:100%; height:70vh; min-height:420px; border:0; border-radius:12px; background:#fff; }
 </style>
 </head>
 <body>
+<main>
 
-<iframe id="cal" title="Planning des visites" src="about:blank"
-        frameborder="0" scrolling="no"></iframe>
+  <h1>Planning des visites</h1>
+  <p>Touchez le bouton de votre téléphone, puis confirmez.
+     L'agenda apparaîtra dans votre propre agenda et se mettra à jour tout seul.</p>
 
-<noscript>
-  <iframe style="position:fixed;inset:0;width:100%;height:100%;border:0"
-    src="https://calendar.google.com/calendar/embed?src=azelartmarie%40gmail.com&amp;ctz=Europe%2FParis&amp;wkst=2&amp;mode=MONTH&amp;showTitle=0&amp;showPrint=0&amp;showTabs=0&amp;showCalendars=0&amp;showTz=0"></iframe>
-</noscript>
+  <!-- iPhone / iPad : abonnement dans l'app Calendrier, sans compte Google -->
+  <a class="btn alt" id="btnApple"
+     href="webcal://calendar.google.com/calendar/ical/azelartmarie%40gmail.com/public/basic.ics">
+    🍎 iPhone / iPad
+    <small>puis « S'abonner »</small>
+  </a>
 
-<!-- Android : bandeau d'installation en un tap -->
-<div class="bar" id="barAndroid">
-  <span class="txt">Garder le planning sur l'écran d'accueil&nbsp;?</span>
-  <button type="button" class="go"    id="btnInstall">Installer</button>
-  <button type="button" class="close" id="btnNoAndroid">Non</button>
-</div>
+  <!-- Android (ou tout appareil avec un compte Google) -->
+  <a class="btn alt" id="btnAndroid" target="_blank" rel="noopener"
+     href="https://calendar.google.com/calendar/render?cid=azelartmarie%40gmail.com">
+    🤖 Android / compte Google
+    <small>puis « Ajouter »</small>
+  </a>
 
-<!-- iPhone / iPad : Apple n'autorise pas l'installation en un tap -->
-<div class="bar" id="barIOS">
-  <span class="txt">Pour garder le planning&nbsp;: <b>Partager</b> puis <b>Sur l'écran d'accueil</b>.</span>
-  <button type="button" class="close" id="btnNoIOS">OK</button>
-</div>
+  <!-- Aide affichée seulement sur iPhone ouvert depuis une application (WhatsApp…) -->
+  <div class="help" id="helpIOS">
+    Ouvert depuis WhatsApp et rien ne se passe&nbsp;? Touchez <b>•••</b> ou l'icône boussole,
+    choisissez <b>Ouvrir dans Safari</b>, puis touchez à nouveau le bouton 🍎.
+  </div>
+
+  <h2>Consulter sans rien ajouter</h2>
+  <iframe id="cal" title="Planning des visites" src="about:blank"></iframe>
+
+</main>
 
 <script>
 (function () {
 
-  // ---- Agenda affiché ------------------------------------------------------
-  // Pour changer d'agenda, remplacer la valeur de SRC ci-dessous.
+  // ---- Agenda --------------------------------------------------------------
   var SRC = "azelartmarie@gmail.com";
   var TZ  = "Europe/Paris";
 
-  // Vue liste sur petit écran (plus lisible), vue mois sur grand écran.
-  // Pour forcer une vue, remplacer la ligne suivante par : var mode = "MONTH";
+  // Vue liste sur téléphone (plus lisible), vue mois sur grand écran.
   var mode = (window.innerWidth < 600) ? "AGENDA" : "MONTH";
 
   document.getElementById("cal").src =
       "https://calendar.google.com/calendar/embed"
     + "?src=" + encodeURIComponent(SRC)
     + "&ctz=" + encodeURIComponent(TZ)
-    + "&wkst=2"              // semaine commençant le lundi
-    + "&mode=" + mode
+    + "&wkst=2&mode=" + mode
     + "&showTitle=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0";
 
-  // ---- Outils --------------------------------------------------------------
-  var barAndroid = document.getElementById("barAndroid");
-  var barIOS     = document.getElementById("barIOS");
-
-  function refused() {
-    try { return localStorage.getItem("hintOff") === "1"; } catch (e) { return false; }
-  }
-  function refuse() {
-    try { localStorage.setItem("hintOff", "1"); } catch (e) {}
-  }
-  function installed() {
-    return window.navigator.standalone === true
-        || window.matchMedia("(display-mode: standalone)").matches;
-  }
-
-  // ---- Android : le navigateur signale que la page est installable ---------
-  // Chrome et Samsung Internet déclenchent "beforeinstallprompt". On empêche
-  // leur propre bandeau (souvent jamais affiché) et on montre le nôtre.
-  var invite = null;
-
-  window.addEventListener("beforeinstallprompt", function (e) {
-    e.preventDefault();
-    invite = e;
-    if (!installed() && !refused()) barAndroid.classList.add("show");
-  });
-
-  document.getElementById("btnInstall").addEventListener("click", function () {
-    if (!invite) { barAndroid.classList.remove("show"); return; }
-    invite.prompt();                       // fenêtre d'installation du téléphone
-    invite.userChoice.then(function () {
-      invite = null;
-      barAndroid.classList.remove("show"); // installé ou refusé : on n'insiste pas
-    });
-  });
-
-  document.getElementById("btnNoAndroid").addEventListener("click", function () {
-    barAndroid.classList.remove("show");
-    refuse();
-  });
-
-  window.addEventListener("appinstalled", function () {
-    barAndroid.classList.remove("show");
-    refuse();
-  });
-
-  // ---- iPhone / iPad : guide manuel, seule voie possible -------------------
-  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  // ---- Mise en avant du bon bouton -----------------------------------------
+  var ua = navigator.userAgent;
+  var isIOS = /iPad|iPhone|iPod/.test(ua)
            || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/i.test(ua);
 
-  if (isIOS && !installed() && !refused()) barIOS.classList.add("show");
+  var apple   = document.getElementById("btnApple");
+  var android = document.getElementById("btnAndroid");
 
-  document.getElementById("btnNoIOS").addEventListener("click", function () {
-    barIOS.classList.remove("show");
-    refuse();
-  });
+  function highlight(first, second) {
+    first.classList.replace("alt", "main");
+    first.parentNode.insertBefore(first, second);   // le bon bouton en premier
+  }
 
-  // ---- Service worker : requis pour que la page soit installable -----------
+  if (isIOS) {
+    highlight(apple, android);
+    // Le navigateur intégré de WhatsApp n'est pas toujours détectable :
+    // l'aide est donc affichée sur tout iPhone / iPad.
+    document.getElementById("helpIOS").classList.add("show");
+  } else if (isAndroid) {
+    highlight(android, apple);
+  }
+
+  // ---- Service worker conservé pour les icônes déjà installées -------------
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
       navigator.serviceWorker.register("sw.js").catch(function () {});
